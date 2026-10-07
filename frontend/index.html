@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DineDesk · Restaurant Reservation & Kitchen Order Console</title>
+  <meta name="description" content="Integrated restaurant front-of-house reservation manager, table capacity validator, and kitchen order display console (KDS)." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%22%20100%22%20100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>" />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fbf7f4',
+              100: '#f6ece6',
+              200: '#edd8cc',
+              300: '#dfbcab',
+              400: '#cc9780',
+              500: '#b8775b',
+              600: '#9d5e44',
+              700: '#834b36',
+              800: '#6c3f2f',
+              900: '#593529',
+              950: '#321c15',
+            },
+            amberAccent: {
+              500: '#d97706',
+              600: '#b45309'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- React 18 & Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen selection:bg-brand-500 selection:text-white">
+  <div id="root"></div>
+
+  <!-- Main Application Script -->
+  <script type="text/babel" src="/js/app.js"></script>
+</body>
+</html>
