@@ -5,6 +5,9 @@
 [![Database](https://img.shields.io/badge/database-SQLite3%20%7C%20ACID%20WAL-003B57.svg)](https://sqlite.org/)
 [![External API](https://img.shields.io/badge/external%20api-TheMealDB%20(Free%20Tier)-orange.svg)](https://www.themealdb.com/)
 [![Render](https://img.shields.io/badge/deploy-Render%20Cloud-46E3B7.svg)](https://render.com/)
+[![Live Status](https://img.shields.io/badge/status-LIVE%20ON%20RENDER-brightgreen.svg)](https://project-5-dinedesk.onrender.com)
+
+**🌐 Live Production URL:** [https://project-5-dinedesk.onrender.com](https://project-5-dinedesk.onrender.com)
 
 > **Project 05 | Industry Full-Stack Challenge · Food Service & Restaurant Operations**  
 > Complete operational platform synchronizing front-of-house reservation intake, table capacity validation, and a live kitchen order display console (KDS).
