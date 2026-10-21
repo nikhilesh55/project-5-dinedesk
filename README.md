@@ -1,204 +1,79 @@
-# DineDesk: Restaurant Reservation & Kitchen Order Console
+# DineDesk
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
-[![React 18](https://img.shields.io/badge/frontend-React%2018%20%7C%20Tailwind%20CSS-61dafb.svg)](https://reactjs.org/)
-[![Database](https://img.shields.io/badge/database-SQLite3%20%7C%20ACID%20WAL-003B57.svg)](https://sqlite.org/)
-[![External API](https://img.shields.io/badge/external%20api-TheMealDB%20(Free%20Tier)-orange.svg)](https://www.themealdb.com/)
-[![Render](https://img.shields.io/badge/deploy-Render%20Cloud-46E3B7.svg)](https://render.com/)
-[![Live Status](https://img.shields.io/badge/status-LIVE%20ON%20RENDER-brightgreen.svg)](https://project-5-dinedesk.onrender.com)
+DineDesk is a responsive restaurant reservation and kitchen console. The React client talks to an Express REST API; SQLite persists staff accounts, tables, menu items, reservations, orders, order lines, kitchen events, and audit entries. The API proxies recipe discovery through TheMealDB's free educational endpoint.
 
-**🌐 Live Production URL:** [https://project-5-dinedesk.onrender.com](https://project-5-dinedesk.onrender.com)
+## Run locally
 
-> **Project 05 | Industry Full-Stack Challenge · Food Service & Restaurant Operations**  
-> Complete operational platform synchronizing front-of-house reservation intake, table capacity validation, and a live kitchen order display console (KDS).
+Requires Node.js 22.13 or newer (uses the built-in `node:sqlite` module).
 
----
-
-## 🌟 Executive Summary & Problem Statement
-
-Modern food service venues frequently suffer from fragmented operational workflows: reservation intake occurs through manual phones or disparate consumer apps, table turnover is managed with dry-erase boards, and kitchen orders are scribbled on paper slips.
-
-**DineDesk** eliminates this fragmentation through a unified, browser-based operations platform:
-1. **Front-of-House (Customer)**: Public dining showcase, real-time table capacity verification, instant reservation booking with cryptographically unique reference codes, and self-service cancellation.
-2. **Host / Receptionist Console**: Interactive visual floor plan with live table status tracking (`Available`, `Reserved`, `Occupied`, `Cleaning`), one-click guest check-in/seating, and walk-in waitlist queue management.
-3. **Kitchen Order Console (KDS)**: High-speed four-lane Kanban ticket board (`New` ➔ `Preparing` ➔ `Ready` ➔ `Served`) with real-time preparation timers, chef notes/modifiers, and printable Kitchen Order Tickets (KOT).
-4. **Chef Recipe Explorer**: Live integration with **TheMealDB** educational API providing culinary reference, ingredient measurement extraction, and cooking videos.
-5. **Observability & Analytics**: Daily table-utilization metrics, zone turnover charts, business audit trail, and live backend server log streaming.
-
----
-
-## 🏛️ System Architecture
-
-```
-                               ┌────────────────────────────────────────────────┐
-                               │           Browser / Client Application         │
-                               │  (React 18 Single Page App · Tailwind CSS ·    │
-                               │   Lucide Icons · Glassmorphic Modern UI)       │
-                               └──────────────────────┬─────────────────────────┘
-                                                      │ HTTP / REST (JSON)
-                                                      ▼
-                               ┌────────────────────────────────────────────────┐
-                               │           DineDesk Backend REST Server         │
-                               │      (Multi-Threaded Python 3 HTTP Server)     │
-                               ├──────────────────────┬─────────────────────────┤
-                               │ • Auth & RBAC Token  │ • Capacity Validator    │
-                               │ • Order Lifecycle    │ • Sensitive Data Scrubber│
-                               └──────────┬───────────┴───────────┬─────────────┘
-                                          │                       │
-                     ┌────────────────────┴─────┐   ┌─────────────┴─────────────────┐
-                     │   SQLite Relational DB   │   │  External API: TheMealDB      │
-                     │  (ACID WAL Mode Engine)  │   │  (Normalized Recipe Results)  │
-                     └──────────────────────────┘   └───────────────────────────────┘
+```sh
+npm install
+npm run dev
 ```
 
----
+Open http://localhost:5173. The API listens on http://localhost:3001 and creates `server/data/dinedesk.sqlite` with sample tables, menu items, staff accounts, and a sample future reservation on first start.
 
-## 🗄️ Relational Database Design (8 Core Tables + Waitlist)
+Local development demo accounts (not created when `NODE_ENV=production` unless `ENABLE_DEMO_ACCOUNTS=true`):
 
-DineDesk implements a strict relational database schema enforced with foreign key constraints (`PRAGMA foreign_keys = ON;`) and write-ahead logging (`WAL` mode):
+| Role | Email | Password |
+| --- | --- | --- |
+| Host | host@dinedesk.demo | dine12345 |
+| Kitchen | kitchen@dinedesk.demo | dine12345 |
 
-| Table Name | Primary Key | Foreign Keys / Relationships | Purpose & Key Business Rules |
-| :--- | :--- | :--- | :--- |
-| `users` | `id` | — | Role-based authentication (`host`, `kitchen`, `admin`, `customer`) with SHA-256 salted password hashing. |
-| `tables` | `id` | — | Physical restaurant tables (T-01 to T-08) with capacity constraints, floor zone (`indoor`, `patio`, `vip`, `bar`), and live status (`available`, `reserved`, `occupied`, `cleaning`). |
-| `reservations` | `id` | `table_id` ➔ `tables(id)` | Booking records with unique confirmation codes (e.g. `DD-9482-XK`), party size, date/slot, customer contact, and status lifecycle (`confirmed`, `seated`, `completed`, `cancelled`). |
-| `menu_items` | `id` | — | Active culinary menu catalog categorized by appetizers, mains, specials, desserts, beverages with prices, prep times, and dietary tags. |
-| `orders` | `id` | `table_id` ➔ `tables(id)`, `reservation_id` ➔ `reservations(id)` | Kitchen order tickets tracked through status states (`new`, `preparing`, `ready`, `served`, `cancelled`). |
-| `order_items` | `id` | `order_id` ➔ `orders(id)` [ON DELETE CASCADE], `menu_item_id` ➔ `menu_items(id)` | Itemized line items with quantities, unit prices, chef preparation notes, and status (`pending`, `cooking`, `done`). |
-| `kitchen_events` | `id` | `order_id` ➔ `orders(id)`, `triggered_by_user_id` ➔ `users(id)` | Chronological audit log of kitchen status advancements and prep timestamps. |
-| `audit_logs` | `id` | `user_id` ➔ `users(id)` | System-wide immutable security and transactional audit trail with client IP addresses. |
-| `waitlist` | `id` | — | Walk-in waitlist queue with party size, contact phone, and notifications (`waiting`, `notified`, `seated`). |
+Change the development JWT secret before deployment by setting `JWT_SECRET`. Set `STAFF_INVITE_CODE` to enable staff account registration; registration requests must include this invite code. Set `PORT` to override the API port. Do not use demo accounts or the development secret in a public deployment. The client defaults to same-origin `/api` requests. For local production preview, run `npm run build` and then `npm start`.
 
----
+## Roles and workflows
 
-## 🔌 REST API Specification
+- Guests can browse the restaurant menu and make a reservation. The server chooses the smallest suitable table and rejects conflicting bookings within a two-hour window.
+- Hosts can sign in, review and update reservations, inspect table state, and create orders from menu items.
+- Kitchen staff can review the kitchen board. Authenticated staff move orders one step at a time: `new → preparing → ready → served`.
+- Recipe search is proxied by the backend to `https://www.themealdb.com/api/json/v1/1/search.php?s=...`. Only the free educational API is used; recipe records are suggestions and never the source of truth for restaurant menu or orders.
+- Recipe Studio separates The Olive Room's five original house recipes from TheMealDB inspiration. House recipes include serving size, prep time, ingredient quantities, a signature touch, plating method, and suggested menu price.
 
-### Authentication & Profiles
-| Method | Endpoint | Description | Role / Auth |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Authenticate staff credentials & issue HMAC token | Public |
-| `POST` | `/api/auth/register` | Register new customer or staff member | Public |
-| `GET` | `/api/auth/me` | Fetch active user profile from Bearer token | Authenticated |
-| `POST` | `/api/auth/logout` | Sign out and invalidate local session | Authenticated |
+## Database design
 
-### Floor Plan & Table Management
-| Method | Endpoint | Description | Role / Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/tables` | List all tables, floor zones, and active seated guests | Public / Staff |
-| `GET` | `/api/tables/availability` | Validate table capacity for given date, slot & party | Public |
-| `PATCH` | `/api/tables/:id/status` | Update table status (`available`, `reserved`, `occupied`, `cleaning`) | Host / Admin |
-
-### Reservations Lifecycle
-| Method | Endpoint | Description | Role / Auth |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/reservations` | Create reservation with automatic table capacity assignment | Public |
-| `GET` | `/api/reservations` | List reservations with date, status, and search filters | Host / Admin |
-| `GET` | `/api/reservations/:ref` | Lookup reservation by confirmation code or ID | Public |
-| `PATCH` | `/api/reservations/:id/status` | Update reservation status (`seated`, `completed`, `cancelled`) | Host / Admin |
-| `POST` | `/api/reservations/:code/cancel` | Customer self-service cancellation by confirmation code | Public |
-
-### Kitchen Orders & KDS Console
-| Method | Endpoint | Description | Role / Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/orders` | List order tickets with line items and timestamps | Kitchen / Host / Admin |
-| `POST` | `/api/orders` | Create new order ticket for a table with menu items & notes | Staff |
-| `PATCH` | `/api/orders/:id/status` | Advance status (`new` ➔ `preparing` ➔ `ready` ➔ `served`) | Kitchen / Staff |
-| `GET` | `/api/kitchen/board` | Retrieve orders organized into 4 Kanban lanes with elapsed timers | Kitchen / Staff |
-
-### TheMealDB External Integration
-| Method | Endpoint | Description | Role / Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/external/recipes` | Search recipes via TheMealDB with normalized response | Public / Staff |
-| `GET` | `/api/external/recipes/ingredient` | Filter recipes by key ingredient (stretch feature) | Public / Staff |
-| `GET` | `/api/external/recipes/:id` | Lookup full recipe instructions and measured ingredient list | Public / Staff |
-
-### Observability & Management
-| Method | Endpoint | Description | Role / Auth |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/analytics/utilization` | Table occupancy rate %, active orders, and zone statistics | Staff / Admin |
-| `GET` | `/api/audit-logs` | Transactional audit trail of all floor and kitchen actions | Admin / Host |
-| `GET` | `/api/system/logs` | Real-time sanitized backend application server stream | Admin / Viva Demo |
-| `GET` | `/api/health` | Service health status and timestamp | Cloud Monitor |
-
----
-
-## 🚀 Local Quickstart & Execution
-
-### Prerequisites
-- Python 3.10+ (Python 3.13 tested)
-- No external dependencies required! Uses Python standard library.
-
-### Launch Application
-```bash
-# Clone the repository
-git clone https://github.com/nikhilesh55/project-5-dinedesk.git
-cd project-5-dinedesk
-
-# Run the server directly
-python3 app.py
-# Or use the launcher script:
-./run.sh
+```text
+users ──< reservations >── tables
+  │                           │
+  ├──< audit_logs             └──< orders ──< order_items >── menu_items
+  └──< kitchen_events >── orders
 ```
 
-Open your browser at: **`http://localhost:5000`**
+SQLite schema and constraints are initialized in `server/index.js`. Foreign keys connect orders, items, tables, reservations, staff, events, and logs. State columns use `CHECK` constraints; order item quantities and prices are validated. Reservations only persist when an available table has capacity and no overlapping booking in the two-hour seating window.
 
-### Pre-Configured Demo Credentials
-For easy demonstration during presentation / viva:
-- 🛎️ **Host / Receptionist**: `host@dinedesk.com` / `HostPass123!`
-- 👨‍🍳 **Kitchen Staff**: `kitchen@dinedesk.com` / `KitchenPass123!`
-- 👔 **Restaurant Manager**: `admin@dinedesk.com` / `AdminPass123!`
-*(The header also includes a 1-click Demo Switcher for instant role changing).*
+## REST API
 
----
+Authentication uses a signed 12-hour bearer token; passwords use bcrypt hashing. Management routes enforce roles on the server.
 
-## 🧪 Automated Testing Suite
+| Method | Path | Access | Purpose |
+| --- | --- | --- | --- |
+| POST | `/api/auth/login` | Public | Sign in and receive a token |
+| POST | `/api/auth/register` | Invite code required | Create a staff account |
+| GET | `/api/menu` | Public | List active menu items |
+| GET | `/api/tables` | Public | List table capacities and states |
+| POST | `/api/reservations` | Public | Validate capacity and create a reservation |
+| POST | `/api/reservations/:id/cancel` | Public (matching reservation email required) | Cancel a confirmed reservation |
+| GET | `/api/reservations` | Host | List reservations |
+| GET | `/api/reservations/:id` | Host | View reservation detail |
+| PATCH | `/api/reservations/:id` | Host | Update reservation status |
+| DELETE | `/api/reservations/:id` | Host | Cancel a confirmed reservation |
+| GET | `/api/orders` | Host or kitchen | List orders and lines |
+| GET | `/api/orders/:id` | Host or kitchen | View order detail and kitchen event history |
+| POST | `/api/orders` | Host | Create an order with menu item lines |
+| PATCH | `/api/orders/:id/status` | Host or kitchen | Advance the kitchen state |
+| GET | `/api/recipes?q=...` | Public | Search normalized TheMealDB results |
+| GET | `/api/audit` | Host | Read recent user actions |
+| GET | `/api/health` | Public | API health check |
 
-Run the complete 17-test automated verification suite:
-```bash
-python3 -m unittest discover -s tests -v
-```
+Errors return JSON `{ "error": "..." }` with a useful 4xx/5xx status. Important authentication, reservation, order, and status actions are persisted in `audit_logs`; transitions are recorded in `kitchen_events`.
 
-**Test Coverage Areas:**
-- `test_db.py`: Verifies all 8 mandatory relational tables, foreign keys, cascade deletes, and data integrity.
-- `test_auth.py`: Cryptographic password hashing, HMAC bearer token validation, and RBAC enforcement.
-- `test_capacity.py`: Real table capacity validation, party size boundaries, and reservation cancellation.
-- `test_orders_kds.py`: Order line item validation and complete Kanban status transitions (`new` ➔ `preparing` ➔ `ready` ➔ `served`).
-- `test_external_api.py`: TheMealDB proxying, measurement parsing, and resilient fallback caching.
-- `test_api_server.py`: Full end-to-end HTTP integration tests verifying all REST endpoints over live TCP.
+## Deployment
 
----
+The app serves the built React files and API from one Node process after `npm run build` and `npm start`. A Docker image and Compose file are included. Copy `.env.example` to `.env`, replace the JWT secret and staff invite code with unique random values, then run `docker compose up --build`. Compose keeps SQLite on a named volume at `server/data`; back up that volume. For a hosted single-instance service, mount persistent storage at `/app/server/data`, set the same environment variables in the host, and enable HTTPS. Render Free services do not support persistent disks, so do not deploy this SQLite setup there if reservation/order persistence across restarts is required. A managed PostgreSQL database is needed for a free hosted database or horizontal scaling; the PostgreSQL adapter is not implemented yet. Deployment URL: not deployed yet.
 
-## ☁️ Render Cloud Deployment
+## Demo sample
 
-DineDesk is pre-configured for automated deployment on **Render**:
-
-1. **Repository**: `https://github.com/nikhilesh55/project-5-dinedesk`
-2. **Runtime**: Python 3
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `python3 app.py`
-5. **Port Binding**: Binds automatically to Render's dynamic `$PORT` environment variable and listens on `0.0.0.0`.
-6. **Health Check Path**: `/api/health`
-7. **Blueprint**: `render.yaml` included in root for zero-configuration 1-click deployment.
-
----
-
-## 👨‍🏫 Evaluator / Viva Demo Walkthrough
-
-1. **Front-of-House Booking Flow**:
-   - Navigate to **"Reserve Table"**. Select 4 guests, pick date/time, click **"Check Table Availability"** to show instant capacity calculation.
-   - Enter guest details, submit reservation, and show the generated reference code (e.g. `DD-9482-XK`).
-2. **Customer Self-Service Portal**:
-   - Navigate to **"My Booking"**, enter the reference code, and view the live booking card.
-3. **Host Floor Management**:
-   - Click **"Demo: 🛎️ Host"** in header. Observe Table T-03 marked as reserved.
-   - Click **"Seat & Check In"** to transition reservation to `seated` and table to `occupied`.
-4. **Kitchen Order Console (KDS)**:
-   - Click **"Order"** on Table T-01. Punch items and chef notes.
-   - Click **"Demo: 👨‍🍳 Kitchen"**. Observe ticket arrive in **New Orders** lane.
-   - Move ticket: `Fire Ticket` (Preparing) ➔ `Pass to Service` (Ready) ➔ `Mark Served`.
-   - Click **"Print Ticket"** icon to preview the 80mm Kitchen Order Ticket (KOT).
-5. **TheMealDB Integration**:
-   - Navigate to **"Chef Recipes"**. Search for `"Salmon"` or search by ingredient `"Garlic"`.
-   - Click any card to show parsed ingredient measurements and cooking instructions.
-6. **Observability & Logs**:
-   - Navigate to **"Analytics & Logs"**. Show Table Utilization Gauge, the immutable Business Audit Trail, and the live Backend Server Stream!
+1. Open the public menu, then make a reservation for a future date and party size.
+2. Sign in as host to see the reservation and its assigned table.
+3. Create an order with menu items; sign in as kitchen to move its ticket through all four lanes.
+4. Search a dish in Recipe finder to see normalized TheMealDB inspiration.
