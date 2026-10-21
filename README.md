@@ -69,7 +69,20 @@ Errors return JSON `{ "error": "..." }` with a useful 4xx/5xx status. Important 
 
 ## Deployment
 
-The app serves the built React files and API from one Node process after `npm run build` and `npm start`. A Docker image and Compose file are included. Copy `.env.example` to `.env`, replace the JWT secret and staff invite code with unique random values, then run `docker compose up --build`. Compose keeps SQLite on a named volume at `server/data`; back up that volume. For a hosted single-instance service, mount persistent storage at `/app/server/data`, set the same environment variables in the host, and enable HTTPS. Render Free services do not support persistent disks, so do not deploy this SQLite setup there if reservation/order persistence across restarts is required. A managed PostgreSQL database is needed for a free hosted database or horizontal scaling; the PostgreSQL adapter is not implemented yet. Deployment URL: not deployed yet.
+The local app serves the built React files and API from one Node process after `npm run build` and `npm start`. Local development uses SQLite. A Docker image and Compose file are included for a single machine, with SQLite persisted on a named volume at `server/data`.
+
+### Public student demo (Render + Supabase)
+
+The hosted entry point uses the same REST routes and React client, with Supabase Postgres as its persistent database. Run `server/supabase-schema.sql` once in the Supabase SQL Editor before the first deploy. It creates the required tables, sample tables and menu, row-level security, and transaction-safe reservation and order functions. The hosted API uses only the Supabase service role key on the server; never put it in a `VITE_` variable or browser code.
+
+1. Create a Supabase project and run `server/supabase-schema.sql` in its SQL Editor.
+2. In Supabase Project Settings > API, copy the project URL and the `service_role` key. Keep the key private.
+3. Connect the GitHub repository and the `dinedesk-react-express` branch to Render as a Blueprint using the root `render.yaml`.
+4. Enter `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and a private `STAFF_INVITE_CODE` when prompted. Render generates a JWT secret. The service listens on Render's assigned port and uses HTTPS.
+5. Open the deployed site, choose **Staff sign in → Have a staff invite code? Create an account**, then create one host account and one kitchen account with your invite code.
+6. Open `/api/health` on the new service URL; it should return `{"ok":true,"database":"supabase"}`. Add the resulting public URL below.
+
+The free Render web service sleeps when idle and may take about a minute to wake. Supabase Free projects may pause after a week of low activity and have a 500 MB database limit; this is suitable for a classroom demo, not a production restaurant without a backup and availability plan. Current deployment URL: not deployed yet.
 
 ## Demo sample
 
@@ -77,3 +90,4 @@ The app serves the built React files and API from one Node process after `npm ru
 2. Sign in as host to see the reservation and its assigned table.
 3. Create an order with menu items; sign in as kitchen to move its ticket through all four lanes.
 4. Search a dish in Recipe finder to see normalized TheMealDB inspiration.
+
