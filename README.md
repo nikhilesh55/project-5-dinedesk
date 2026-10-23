@@ -27,7 +27,7 @@ Change the development JWT secret before deployment by setting `JWT_SECRET`. Set
 - Guests can browse the restaurant menu and make a reservation. The server chooses the smallest suitable table and rejects conflicting bookings within a two-hour window.
 - Hosts can sign in, review and update reservations, inspect table state, and create orders from menu items.
 - Kitchen staff can review the kitchen board. Authenticated staff move orders one step at a time: `new → preparing → ready → served`.
-- Recipe search is proxied by the backend to `https://www.themealdb.com/api/json/v1/1/search.php?s=...`. Only the free educational API is used; recipe records are suggestions and never the source of truth for restaurant menu or orders.
+- Recipe search is proxied by the backend to TheMealDB free educational endpoints: `search.php?s=...` for dish names, `filter.php?i=...` for ingredients, and cuisine filters for Indian recipes. The external response is normalized before it reaches the browser; recipe records are suggestions and never the source of truth for restaurant menu or orders.
 - Recipe Studio separates The Olive Room's five original house recipes from TheMealDB inspiration. House recipes include serving size, prep time, ingredient quantities, a signature touch, plating method, and suggested menu price.
 
 ## Database design
@@ -61,7 +61,9 @@ Authentication uses a signed 12-hour bearer token; passwords use bcrypt hashing.
 | GET | `/api/orders/:id` | Host or kitchen | View order detail and kitchen event history |
 | POST | `/api/orders` | Host | Create an order with menu item lines |
 | PATCH | `/api/orders/:id/status` | Host or kitchen | Advance the kitchen state |
-| GET | `/api/recipes?q=...` | Public | Search normalized TheMealDB results |
+| GET | `/api/recipes?q=...` | Public | Search normalized recipes by dish name |
+| GET | `/api/recipes?ingredient=...` | Public | Filter normalized recipes by ingredient |
+| GET | `/api/recipes?area=Indian` | Public | Browse Indian recipe suggestions |
 | GET | `/api/audit` | Host | Read recent user actions |
 | GET | `/api/health` | Public | API health check |
 
