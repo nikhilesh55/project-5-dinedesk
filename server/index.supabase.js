@@ -210,10 +210,11 @@ app.patch('/api/orders/:id/status', auth, role('host', 'kitchen'), async (req, r
 });
 
 app.get('/api/recipes', async (req, res) => {
-  const q = String(req.query.q || '').trim().slice(0, 80), area = String(req.query.area || '').trim();
+  const q = String(req.query.q || '').trim().slice(0, 80), ingredient = String(req.query.ingredient || '').trim().slice(0, 80), area = String(req.query.area || '').trim();
   if (area && area !== 'Indian') return res.status(400).json({ error: 'Unsupported cuisine filter.' });
-  if (!area && !q) return res.status(400).json({ error: 'Enter an ingredient or dish to search.' });
-  const endpoint = area ? 'filter.php?a=Indian' : `search.php?s=${encodeURIComponent(q)}`;
+  if ((q && ingredient) || (area && (q || ingredient))) return res.status(400).json({ error: 'Choose one recipe search filter at a time.' });
+  if (!area && !q && !ingredient) return res.status(400).json({ error: 'Enter an ingredient or dish to search.' });
+  const endpoint = area ? 'filter.php?a=Indian' : ingredient ? `filter.php?i=${encodeURIComponent(ingredient)}` : `search.php?s=${encodeURIComponent(q)}`;
   try {
     let response = await fetch(`https://www.themealdb.com/api/json/v1/1/${endpoint}`, { signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error('Recipe service error');
